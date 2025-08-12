@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Terraform Init",
+      "type": "shell",
+      "command": "terraform -chdir=terraform init"
+    },
+    {
+      "label": "Terraform Validate",
+      "type": "shell",
+      "command": "terraform -chdir=terraform validate"
+    },
+    {
+      "label": "Terraform Plan",
+      "type": "shell",
+      "command": "terraform -chdir=terraform plan -var=\"project=rt-pipeline\" -var=\"region=us-east-1\" -var=\"alert_amount=500\" -var=\"alarm_email=you@example.com\""
+    },
+    {
+      "label": "Terraform Apply",
+      "type": "shell",
+      "command": "terraform -chdir=terraform apply -auto-approve -var=\"project=rt-pipeline\" -var=\"region=us-east-1\" -var=\"alert_amount=500\" -var=\"alarm_email=you@example.com\""
+    },
+    {
+      "label": "Terraform Destroy",
+      "type": "shell",
+      "command": "terraform -chdir=terraform destroy -auto-approve"
+    }
+  ]
+}
