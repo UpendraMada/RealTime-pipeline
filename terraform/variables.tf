@@ -2,6 +2,7 @@ variable "project" {
   type    = string
   default = "rt-pipeline-user"
 }
+
 variable "region" {
   type    = string
   default = "us-east-1"
@@ -9,10 +10,15 @@ variable "region" {
 
 variable "alert_amount" {
   type    = number
-  default = 500.0 # USD threshold for business alert
+  default = 1500.0
 }
 
 variable "alarm_email" {
   type    = string
-  default = "upendra2813@gmail.com" # optional: email for CW alarms
+  default = "upendra2813@gmail.com"
+}
+
+variable "txn_email" {
+  type    = string
+  default = "upendra2813@gmail.com"
 }

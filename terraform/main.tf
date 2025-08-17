@@ -21,20 +21,18 @@ resource "aws_dynamodb_table" "orders" {
     type = "S"
   }
 
-
   point_in_time_recovery { enabled = true }
-
   tags = { Project = local.name }
 }
 
-# SQS: DLQ
+# Dead Letter Queue
 resource "aws_sqs_queue" "orders_dlq" {
   name                      = "${local.name}-orders-dlq"
   message_retention_seconds = 1209600
   tags                      = { Project = local.name }
 }
 
-# SQS: main
+# Main Queue
 resource "aws_sqs_queue" "orders" {
   name                       = "${local.name}-orders"
   visibility_timeout_seconds = 60
@@ -45,16 +43,23 @@ resource "aws_sqs_queue" "orders" {
   tags = { Project = local.name }
 }
 
-# SNS: business alerts (large orders)
+# SNS Topics
 resource "aws_sns_topic" "txn_alerts" {
   name = "${local.name}-txn-alerts"
   tags = { Project = local.name }
 }
 
-# SNS: CloudWatch alarms
 resource "aws_sns_topic" "alarms" {
   name = "${local.name}-alarms"
   tags = { Project = local.name }
+}
+
+# Subscriptions
+resource "aws_sns_topic_subscription" "txn_email" {
+  count     = length(var.txn_email) > 0 ? 1 : 0
+  topic_arn = aws_sns_topic.txn_alerts.arn
+  protocol  = "email"
+  endpoint  = var.txn_email
 }
 
 resource "aws_sns_topic_subscription" "alarms_email" {
@@ -64,7 +69,7 @@ resource "aws_sns_topic_subscription" "alarms_email" {
   endpoint  = var.alarm_email
 }
 
-# IAM for Lambda
+# IAM Role for Lambda
 data "aws_iam_policy_document" "lambda_assume" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -72,7 +77,6 @@ data "aws_iam_policy_document" "lambda_assume" {
       type        = "Service"
       identifiers = ["lambda.amazonaws.com"]
     }
-
   }
 }
 
@@ -83,23 +87,23 @@ resource "aws_iam_role" "lambda_role" {
 
 data "aws_iam_policy_document" "lambda_policy" {
   statement {
-    sid       = "Logs"
-    actions   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
+    sid     = "Logs"
+    actions = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
     resources = ["arn:aws:logs:*:*:*"]
   }
   statement {
-    sid       = "SQS"
-    actions   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes", "sqs:ChangeMessageVisibility", "sqs:DeleteMessageBatch"]
+    sid     = "SQS"
+    actions = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes", "sqs:ChangeMessageVisibility", "sqs:DeleteMessageBatch"]
     resources = [aws_sqs_queue.orders.arn]
   }
   statement {
-    sid       = "DDB"
-    actions   = ["dynamodb:PutItem", "dynamodb:DescribeTable"]
+    sid     = "DDB"
+    actions = ["dynamodb:PutItem", "dynamodb:DescribeTable"]
     resources = [aws_dynamodb_table.orders.arn]
   }
   statement {
-    sid       = "SNS"
-    actions   = ["sns:Publish"]
+    sid     = "SNS"
+    actions = ["sns:Publish"]
     resources = [aws_sns_topic.txn_alerts.arn, aws_sns_topic.alarms.arn]
   }
 }
@@ -114,14 +118,14 @@ resource "aws_iam_role_policy_attachment" "lambda_attach" {
   policy_arn = aws_iam_policy.lambda_policy.arn
 }
 
-# Package Lambda from ../lambda folder
+# Lambda Packaging
 data "archive_file" "lambda_zip" {
   type        = "zip"
   source_dir  = "${path.module}/../lambda"
   output_path = "${path.module}/../lambda.zip"
 }
 
-# Lambda
+# Lambda Function
 resource "aws_lambda_function" "processor" {
   function_name = "${local.name}-processor"
   role          = aws_iam_role.lambda_role.arn
@@ -140,16 +144,17 @@ resource "aws_lambda_function" "processor" {
   depends_on = [aws_iam_role_policy_attachment.lambda_attach]
 }
 
-# Event source: SQS -> Lambda
+# Event Source Mapping
 resource "aws_lambda_event_source_mapping" "sqs_trigger" {
   event_source_arn                   = aws_sqs_queue.orders.arn
   function_name                      = aws_lambda_function.processor.arn
   batch_size                         = 10
   maximum_batching_window_in_seconds = 5
   function_response_types            = ["ReportBatchItemFailures"]
+  depends_on                         = [aws_lambda_function.processor]
 }
 
-# CloudWatch Alarms
+# Alarms
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   alarm_name          = "${local.name}-lambda-errors"
   comparison_operator = "GreaterThanThreshold"
