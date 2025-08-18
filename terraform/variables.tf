@@ -10,7 +10,7 @@ variable "region" {
 
 variable "alert_amount" {
   type    = number
-  default = 1500.0
+  default = 1000.0
 }
 
 variable "alarm_email" {
