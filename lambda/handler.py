@@ -64,13 +64,8 @@ def validate(payload: dict) -> None:
                 f"Amount mismatch: body={payload['amount']} computed={computed}"
             )
     except Exception:
-        # Do not hard-fail if items don't have unit prices in this test
         pass
-
-# --- Persist to DynamoDB (store ENTIRE payload, including padding) ---
 def persist(payload: dict) -> None:
-    # Keep everything from the incoming JSON (including 'padding' for size),
-    # and add a few system fields.
     item_full = {
         **payload,  # includes 'padding' if present
         "ts": int(time.time()),
@@ -79,8 +74,6 @@ def persist(payload: dict) -> None:
 
     # Convert all numbers to Decimal recursively for DynamoDB
     item_full = _to_decimal(item_full)
-
-    # Idempotent write: don't overwrite an existing order_id
     try:
         resp = table.put_item(
             Item=item_full,
@@ -91,7 +84,6 @@ def persist(payload: dict) -> None:
     except dynamodb.meta.client.exceptions.ConditionalCheckFailedException:
         # Duplicate order_id — treat as success (no reprocess)
         logger.info("Duplicate order_id; skipping put (idempotent).")
-    # Let other exceptions bubble up to be handled by caller
 
 # --- SNS alert if needed ---
 def maybe_alert(payload: dict) -> None:
