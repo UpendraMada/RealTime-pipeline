@@ -76,9 +76,9 @@ To solve the above problem, we implemented a **Real-Time Data Processing Pipelin
 ### 4.Send Test Events
 python tools/send_test_events.py \
   --queue-url "https://sqs.us-east-1.amazonaws.com/<account-id>/rt-pipeline-user-orders" \
-  --count 1000 \
+  --count 26000 \
   --batch-size 10 \
-  --target-kb 5 \
+  --target-kb 200 \
   --rate 0
 ### 5. Verify Processing
 
