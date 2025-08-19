@@ -1,14 +1,20 @@
 # Real-Time Data Processing Pipeline using AWS and Terraform
 
 ## 📌 Problem Statement
-Organizations often need to process **real-time user events** (such as transactions, orders, or logs) at scale. Traditional batch processing introduces delays, making it unsuitable for scenarios requiring instant insights or immediate actions.  
 
-The challenge is to:
-- Accept continuous user events from producers.  
-- Pass them reliably through a queueing system that can handle bursts of traffic.  
-- Process messages with scalable serverless compute that can transform or enrich the data.  
-- Persist the final data into a NoSQL database for low-latency querying and storage.  
-- Build the entire system using **Infrastructure as Code (IaC)** so it can be easily deployed and managed.  
+E-commerce platforms generate large volumes of **real-time transaction events** such as orders, payments, and activity logs. Traditional batch-oriented systems are not suitable for scenarios where **instant validation, notifications, and data persistence** are required.  
+
+The challenge for this assignment is to build a **real-time data processing pipeline** that can:  
+
+- Ingest continuous e-commerce transactions through a **reliable queueing system (Amazon SQS)** to handle bursts of traffic.  
+- Trigger **serverless compute (AWS Lambda)** to process, validate, and enrich transaction data.  
+- Persist valid transactions into a **scalable NoSQL database (Amazon DynamoDB)** for low-latency querying and storage.  
+- Send **real-time notifications (Amazon SNS)** for specific business scenarios, such as:  
+  - Large orders above 1000.  
+  - Transactions with missing or invalid data.  
+- Monitor system health and performance using **Amazon CloudWatch** logs, metrics, and alarms.  
+- Provision all infrastructure components using **Infrastructure as Code (Terraform)**, ensuring reproducibility and maintainability.  
+
 
 ---
 
@@ -32,13 +38,18 @@ To solve the above problem, we implemented a **Real-Time Data Processing Pipelin
 
 4. **Amazon DynamoDB (Storage)**  
    - Stores all processed events for querying and analysis.  
-   - Provides **scalable, low-latency** storage for real-time use cases.  
+   - Provides **scalable, low-latency** storage for real-time use cases.
 
-5. **Amazon CloudWatch (Monitoring)**  
+5. **Amazon SNS (Notification Service)**
+   - Receives published messages from Lambda.
+   - Delivers **real-time alerts** (e.g., via email or SMS) to subscribers.
+   - Ensures stakeholders are notified when events are successfully processed or if failures occur.
+
+6. **Amazon CloudWatch (Monitoring)**  
    - Tracks logs and metrics for Lambda, SQS, and DynamoDB.  
    - Helps verify successful processing and troubleshoot issues.  
 
-6. **Terraform (Infrastructure as Code)**  
+7. **Terraform (Infrastructure as Code)**  
    - Provisions all AWS resources (SQS, Lambda, DynamoDB, IAM roles, etc.).  
    - Ensures reproducibility and version-controlled infrastructure.  
 
@@ -48,14 +59,9 @@ To solve the above problem, we implemented a **Real-Time Data Processing Pipelin
 
 ### 1. Setup Environment
 - Install [Terraform](https://www.terraform.io/downloads.html)  
-- Install [AWS CLI](https://docs.aws.amazon.com/cli/)  
 - Configure AWS profile:  
   ```bash
   aws configure --profile rt-pipeline-user
-
----
-
-## 🚀 Deployment Steps
 
 ### 2. Deploy Infrastructure
 1. Navigate into the Terraform directory: `cd terraform`  
@@ -96,7 +102,6 @@ DynamoDB: Scan table for inserted items via console or AWS CLI.
 - Gained experience in monitoring serverless architectures  
 
 ## 🔮 Future Enhancements
-- Add SNS for fan-out processing  
 - Stream processed data to Amazon S3 or Redshift for analytics  
 - Add error handling with DLQ (Dead Letter Queue)  
 - Implement unit tests and CI/CD pipeline for automated deployments  
